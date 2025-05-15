@@ -1,12 +1,15 @@
 package com.github.vinola.dockeruibackend.service
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallbackTemplate
+import com.github.dockerjava.api.model.Frame
 import com.github.vinola.dockeruibackend.dto.ContainerDTO
 import com.github.vinola.dockeruibackend.dto.PortBinding
 import org.springframework.stereotype.Service
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
+import java.nio.charset.StandardCharsets
 
 @Service
 class DockerService{
@@ -80,6 +83,42 @@ class DockerService{
                 .exec()
         } catch (ex: Exception) {
             throw RuntimeException("Erro ao renomear container: ${ex.message}", ex)
+        }
+    }
+
+    fun restartContainer(containerId: String) {
+        try {
+            dockerClient.restartContainerCmd(containerId).exec()
+        } catch (ex: Exception) {
+            throw RuntimeException("Erro ao reiniciar container: ${ex.message}", ex)
+        }
+    }
+
+    fun getContainerLogs(containerId: String): String {
+        return try {
+            val logBuilder = StringBuilder()
+
+            val callback = object : ResultCallbackTemplate<Nothing, Frame>() {
+                override fun onNext(frame: Frame) {
+                    logBuilder.append(String(frame.payload, StandardCharsets.UTF_8))
+                }
+            }
+
+            dockerClient.logContainerCmd(containerId)
+                .withStdOut(true)
+                .withStdErr(true)
+                .withTimestamps(true)
+                .withTailAll()
+                .exec(callback)
+                .awaitCompletion()
+
+            if (logBuilder.isEmpty()) {
+                "Sem logs disponíveis."
+            } else {
+                logBuilder.toString()
+            }
+        } catch (ex: Exception) {
+            throw RuntimeException("Erro ao obter logs do container: ${ex.message}", ex)
         }
     }
 

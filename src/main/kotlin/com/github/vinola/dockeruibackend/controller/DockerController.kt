@@ -41,6 +41,16 @@ class DockerController(
         }
     }
 
+    @PostMapping("/{id}/restart")
+    fun restartContainer(@PathVariable id: String) : ResponseEntity<String> {
+        return try {
+            dockerService.restartContainer(id)
+            ResponseEntity.ok("Container restarted successfully")
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error restarting container: ${e.message}")
+        }
+    }
+
     @PostMapping("/{id}/rename/{newName}")
     fun renameContainer(@PathVariable id: String, @PathVariable newName: String) : ResponseEntity<String> {
         return try {
@@ -48,6 +58,16 @@ class DockerController(
             ResponseEntity.ok("Container renamed successfully")
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error renaming container: ${e.message}")
+        }
+    }
+
+    @GetMapping("/{id}/logs")
+    fun getContainerLogs(@PathVariable id: String): ResponseEntity<String> {
+        return try {
+            val logs = dockerService.getContainerLogs(id)
+            ResponseEntity.ok(logs)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching logs: ${e.message}")
         }
     }
 
